@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ElectroLab Pro - מעבדת מעגלים חשמליים מתקדמת</title>
+    <style>
+        :root {
+            --bg: #0b0f19;
+            --panel: #151d2a;
+            --accent: #38bdf8;
+            --success: #22c55e;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --text: #f8fafc;
+            --subtext: #94a3b8;
+        }
+
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        body {
+            margin: 0;
+            padding: 12px;
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: system-ui, -apple-system, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 12px;
+            width: 100%;
+            max-width: 900px;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 1.8rem;
+            color: var(--accent);
+        }
+
+        .game-container {
+            width: 100%;
+            max-width: 900px;
+            background: var(--panel);
+            border-radius: 16px;
+            padding: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            border: 1px solid #2a364f;
+        }
+
+        .stage-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #0b0f19;
+            padding: 10px 16px;
+            border-radius: 10px;
+            border: 1px solid #1e293b;
+        }
+
+        .stage-title { font-weight: bold; font-size: 1rem; color: var(--accent); }
+
+        .canvas-container {
+            position: relative;
+            width: 100%;
+            height: 280px;
+            background: #020617;
+            border-radius: 12px;
+            border: 2px solid #2a364f;
+            overflow: hidden;
+        }
+
+        canvas { width: 100%; height: 100%; display: block; }
+
+        .info-card {
+            background: #0b0f19;
+            padding: 14px;
+            border-radius: 10px;
+            border-right: 4px solid var(--accent);
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+
+        /* Color Code Table Component */
+        .color-code-box {
+            background: #0b0f19;
+            border: 1px solid #2a364f;
+            border-radius: 10px;
+            padding: 10px;
+            margin-top: 8px;
+            display: none;
+        }
+
+        .color-code-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(70px, 1fr));
+            gap: 6px;
+            margin-top: 6px;
+            text-align: center;
+            font-size: 0.75rem;
+        }
+
+        .color-item {
+            padding: 4px;
+            border-radius: 4px;
+            color: #fff;
+            font-weight: bold;
+            text-shadow: 1px 1px 2px #000;
+        }
+
+        .options-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+            gap: 10px;
+        }
+
+        .option-btn {
+            background: #1e293b;
+            border: 2px solid #334155;
+            border-radius: 10px;
+            padding: 10px 8px;
+            color: var(--text);
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            transition: all 0.2s;
+            text-align: center;
+        }
+
+        .option-btn:hover { border-color: var(--accent); background: #26334d; }
+        .option-btn.selected { border-color: var(--accent); background: #0284c7; }
+        .option-btn .icon { font-size: 1.6rem; }
+        .option-btn .name { font-weight: bold; font-size: 0.85rem; }
+        .option-btn .desc { font-size: 0.75rem; color: var(--subtext); }
+
+        .action-bar { display: flex; gap: 10px; }
+
+        .btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 10px;
+            font-weight: bold;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        .btn-test { background: var(--accent); color: #000; }
+        .btn-next { background: var(--success); color: #000; display: none; }
+
+        .feedback {
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            display: none;
+            line-height: 1.4;
+        }
+        .feedback.success { background: rgba(34, 197, 94, 0.15); color: #4ade80; border: 1px solid #22c55e; }
+        .feedback.error { background: rgba(239, 68, 68, 0.15); color: #fca5a5; border: 1px solid #ef4444; }
+
+        /* Resistor Color Visual */
+        .resistor-render {
+            display: inline-flex;
+            align-items: center;
+            background: #d1b585;
+            height: 16px;
+            width: 50px;
+            border-radius: 8px;
+            position: relative;
+            margin: 0 4px;
+            vertical-align: middle;
+        }
+        .band { width: 4px; height: 100%; position: absolute; }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <h1>⚡ ElectroLab Pro</h1>
+    <p>מעבדת ניתוח, תכנון ופתרון מעגלים חשמליים מתקדמים</p>
+</div>
+
+<div class="game-container">
+    <div class="stage-bar">
+        <span class="stage-title" id="stage-number">שלב 1 מתוך 10</span>
+        <span id="stage-name" style="color: var(--accent);">חוק אוהם וחישוב נגד</span>
+    </div>
+
+    <div class="canvas-container">
+        <canvas id="circuitCanvas"></canvas>
+    </div>
+
+    <div class="info-card">
+        <div id="mission-text"></div>
+        <div id="theory-text" style="margin-top: 8px; font-size: 0.85rem; color: var(--subtext);"></div>
+    </div>
+
+    <!-- Resistor Color Code Guide -->
+    <div class="color-code-box" id="color-code-box">
+        <strong>🎨 מקרא קוד צבעים לנגדים (4 פספסים):</strong>
+        <div class="color-code-grid">
+            <div class="color-item" style="background:#000;">שחור: 0</div>
+            <div class="color-item" style="background:#8B4513;">חום: 1 (x10)</div>
+            <div class="color-item" style="background:#ff0000;">אדום: 2 (x100)</div>
+            <div class="color-item" style="background:#ff7f00;">כתום: 3 (x1K)</div>
+            <div class="color-item" style="background:#ffff00; color:#000;">צהוב: 4 (x10K)</div>
+            <div class="color-item" style="background:#00ff00; color:#000;">ירוק: 5</div>
+            <div class="color-item" style="background:#0000ff;">כחול: 6</div>
+            <div class="color-item" style="background:#8b00ff;">סגול: 7</div>
+            <div class="color-item" style="background:#808080;">אפור: 8</div>
+            <div class="color-item" style="background:#ffffff; color:#000;">לבן: 9</div>
+        </div>
+    </div>
+
+    <div>
+        <div style="font-size: 0.85rem; color: var(--subtext); margin-bottom: 6px;">בחר רכיב מהרשימה:</div>
+        <div class="options-grid" id="options-container"></div>
+    </div>
+
+    <div class="feedback" id="feedback"></div>
+
+    <div class="action-bar">
+        <button class="btn btn-test" id="test-btn" onclick="testCircuit()">הפעל מעגל ⚡</button>
+        <button class="btn btn-next" id="next-btn" onclick="nextStage()">שלב הבא ⏩</button>
+    </div>
+</div>
+
+<script>
+    const stages = [
+        {
+            title: "חוק אוהם והגנת LED (חישוב נגד)",
+            mission: "<b>משימה:</b> מקור המתח מספק <b>9V</b>. נורת ה-LED פועלת ב-<b>2V</b> ובזרם מקסימלי של <b>20mA (0.02A)</b>. באיזה נגד תשתמש לפי חוק אוהם?",
+            theory: "💡 <b>חוק אוהם:</b> $R = \\frac{V_{source} - V_{led}}{I} = \\frac{9 - 2}{0.02} = 350\\Omega$. הנגד הקרוב ביותר במלאי התקני הוא <b>330Ω (כתום-כתום-חום)</b>.",
+            showColorCode: true,
+            target: "res_330",
+            loadType: "led",
+            options: [
+                { id: "res_10", name: "נגד 10Ω", icon: "⚡", desc: "חום-שחור-שחור", color: "10" },
+                { id: "res_330", name: "נגד 330Ω", icon: "⚡", desc: "כתום-כתום-חום", color: "330" },
+                { id: "res_10k", name: "נגד 10kΩ", icon: "⚡", desc: "חום-שחור-כתום", color: "10k" }
+            ],
+            explanation: "<b>מדויק!</b> $330\\Omega$ מגביל את הזרם ל-21mA בערך, מה שמאפשר ל-LED להאיר בעוצמה מלאה בבטחה. נגד 10Ω היה שורף אותה, ו-10kΩ היה חלש מדי."
+        },
+        {
+            title: "זיהוי קוד צבעים (1kΩ)",
+            mission: "<b>משימה:</b> המעגל דורש התנגדות של בדיוק <b>1,000Ω (1kΩ)</b>. איזה נגד מתאים לפי טבעות הצבע שלו?",
+            theory: "🎨 <b>שיטת הטבעות:</b> טבעת 1 = ספרה 1, טבעת 2 = ספרה 2, טבעת 3 = מכפיל. <br>1kΩ = 1 (חום) | 0 (שחור) | x100 (אדום) = <b>חום-שחור-אדום</b>.",
+            showColorCode: true,
+            target: "res_1k",
+            loadType: "bulb",
+            options: [
+                { id: "res_220", name: "אדום-אדום-חום", icon: "⚡", desc: "220Ω" },
+                { id: "res_1k", name: "חום-שחור-אדום", icon: "⚡", desc: "1,000Ω (1kΩ)" },
+                { id: "res_47k", name: "צהוב-סגול-כתום", icon: "⚡", desc: "47,000Ω (47kΩ)" }
+            ],
+            explanation: "<b>מעולה!</b> חום (1) + שחור (0) כפול אדום (100) = 1,000Ω."
+        },
+        {
+            title: "דיודת הגנה (חסימת קוטביות הפוכה)",
+            mission: "<b>משימה:</b> המעגל מוזן במתח ישר. איזה רכיב ימנע נזק למערכת במקרה של חיבור חירום בקוטביות הפוכה?",
+            theory: "🛡️ <b>דיודת סיליקון (1N4007):</b> מעבירה זרם רק במפליג ישר (Forward Bias) מפס האנודה לקתודה, וחוסמת מתח הפוך (Reverse Bias).",
+            showColorCode: false,
+            target: "diode",
+            loadType: "motor",
+            options: [
+                { id: "diode", name: "דיודה 1N4007", icon: "➡️", desc: "חוסמת זרם חוזר" },
+                { id: "capacitor", name: "קבל 100uF", icon: "🔋", desc: "סינון מטענים" },
+                { id: "inductor", name: "סליל 10mH", icon: "🌀", desc: "השראות" }
+            ],
+            explanation: "<b>נכון מאוד!</b> הדיודה פועלת כמשאבה חד-כיוונית ומגנה על הציוד החשמלי מהתקנה שגויה של הסוללה."
+        },
+
+        {
+            title: "טרנזיסטור כמפסק אלקטרוני (NPN)",
+            mission: "<b>משימה:</b> אות בקרה חלש בבסיס צריך להפעיל מנוע כבד. איזה רכיב חצי-מוליך משמש כמתג/מגבר אלקטרוני?",
+            theory: "🔀 <b>טרנזיסטור BJT (NPN):</b> זרם קטן בבסיס ($I_B$) מאפשר הזרמת זרם גדול בהרבה בין הקולקטור לאמיטר ($I_C = \\beta \\cdot I_B$).",
+            showColorCode: false,
+            target: "npn",
+            loadType: "motor",
+            options: [
+                { id: "npn", name: "טרנזיסטור NPN", icon: "🔀", desc: "מתג מבוקר מתח/זרם" },
+                { id: "resistor", name: "נגד משתנה", icon: "🎛️", desc: "פוטנציומטר" },
+                { id: "diode", name: "דיודה", icon: "➡️", desc: "חד כיווני" }
+            ],
+            explanation: "<b>מצויין!</b> טרנזיסטור ה-NPN הוא אבן הבניין של האלקטרוניקה המודרנית והלוגיקה הדיגיטלית."
+        },
+        {
+            title: "מעגל סינון RC (ייצוב מתח)",
+            mission: "<b>משימה:</b> המעגל סובל מקפיצות מתח ורעשים. איזה רכיב אוגר מטען חשמלי ויכול 'להחליק' ולייצב את המתח?",
+            theory: "⏳ <b>קבוע זמן RC:</b> $\\tau = R \\cdot C$. הקבל נטען ופורק מטען כדי למנוע נפילות מתח רגעיות בקו ההזנה.",
+            showColorCode: false,
+            target: "capacitor",
+            loadType: "led",
+            options: [
+                { id: "capacitor", name: "קבל אלקטרוליטי", icon: "🔋", desc: "אגירה וסינון" },
+                { id: "zener", name: "דיודת זנר", icon: "⚡", desc: "ייצוב מתח נקודתי" },
+                { id: "fuse", name: "נתיך (Fuse)", icon: "💥", desc: "הגנת קצר" }
+            ],
+            explanation: "<b>כל הכבוד!</b> הקבל פורק את האנרגיה האגורה בו בזמן ירידת מתח וכך שומר על מתח יציב."
+        },
+        {
+            title: "הגנת עומס יתר (נתיך - Fuse)",
+            mission: "<b>משימה:</b> למניעת שריפה במקרה של קצר חשמלי, איזה רכיב יתנתק ויקטע את המעגל באופן פיזי בזרם גבוה?",
+            theory: "🔥 <b>אפקט ג'ול:</b> $P = I^2 \\cdot R$. כשהזרם עולה מעל המותר, התיל בתוך הנתיך נמס ומנתק את המעגל בבטחה.",
+            showColorCode: false,
+            target: "fuse",
+            loadType: "motor",
+            options: [
+                { id: "fuse", name: "נתיך (Fuse 2A)", icon: "💥", desc: "מנתק בזרם יתר" },
+                { id: "resistor", name: "נגד 100Ω", icon: "⚡", desc: "מגביל זרם" },
+                { id: "wire", name: "מגשר נחושת", icon: "➖", desc: "ללא הגנה" }
+            ],
+            explanation: "<b>בינגו!</b> נתיך הינו רכיב בטיחות קריטי בכל לוח חשמל ומכשיר אלקטרוני."
+        },
+        {
+            title: "דיודת זנר (Zener Diode) לייצוב מתח",
+            mission: "<b>משימה:</b> המעגל דורש מתח מיוצב של <b>5.1V</b> בדיוק עבור מיקרו-מעבד, למרות שמתח הכניסה משתנה. איזה רכיב מיועד לכך?",
+            theory: "📐 <b>מתח פריצה (Zener Breakdown):</b> בדיודת זנר, כשהמתח הבלמתי עולה על מתח הזנר, היא מוליכה ושומרת על מתח קבוע עליה.",
+            showColorCode: false,
+            target: "zener",
+            loadType: "led",
+            options: [
+                { id: "zener", name: "דיודת זנר 5.1V", icon: "🛡️", desc: "ייצוב מתח מדויק" },
+                { id: "diode", name: "דיודה רגילה", icon: "➡️", desc: "מפל מתח 0.7V" },
+                { id: "capacitor", name: "קבל קרמי", icon: "🔋", desc: "סינון תדרים" }
+            ],
+            explanation: "<b>מתוחכם!</b> דיודת זנר בחיבור הפוך שומרת על מתח עבודה קבוע של 5.1V בצורה מופלאה."
+        },
+        {
+            title: "סליל השראתי (Inductor) וסינון תדרים",
+            mission: "<b>משימה:</b> איזה רכיב מתנגד לשינויים מהירים בזרם באמצעות יצירת שדה מגנטי?",
+            theory: "🌀 <b>חוק פאראדיי ולנץ:</b> $V = L \\cdot \\frac{dI}{dt}$. הסליל מייצר מתח נגדי המונע שינויים פתאומיים בזרם.",
+            showColorCode: false,
+            target: "inductor",
+            loadType: "bulb",
+            options: [
+                { id: "inductor", name: "סליל השראה (Inductor)", icon: "🌀", desc: "אוגר בשדה מגנטי" },
+                { id: "capacitor", name: "קבל", icon: "🔋", desc: "אוגר בשדה חשמלי" },
+                { id: "resistor", name: "נגד", icon: "⚡", desc: "ממיר לחום" }
+            ],
+            explanation: "<b>נכון!</b> סלילים וקבלים הם רכיבים אוגרי אנרגיה משלימים (שדה מגנטי מול שדה חשמלי)."
+        },
+        {
+            title: "פוטנציומטר (נגד משתנה)",
+            mission: "<b>משימה:</b> אנו רוצים לבנות מעגל שטיפת אור (Dimmer) המאפשר לשלוט בעוצמת האור באופן רציף. מה נוסיף?",
+            theory: "🎛️ <b>מחלק מתח:</b> שינוי אורך התיל המוליך בתוך הפוטנציומטר משנה את התנגדותו ומשנה את נפילת המתח.",
+            showColorCode: false,
+            target: "potentiometer",
+            loadType: "bulb",
+            options: [
+                { id: "potentiometer", name: "פוטנציומטר", icon: "🎛️", desc: "שליטה ידנית ברמת ההתנגדות" },
+                { id: "resistor", name: "נגד קבוע", icon: "⚡", desc: "ערך קבוע" },
+                { id: "fuse", name: "נתיך", icon: "💥", desc: "הגנה" }
+            ],
+            explanation: "<b>מעולה!</b> פוטנציומטרים משמשים כבקרים לעוצמת קול, תאורה ומהירות מנועים."
+        },
+        {
+            title: "שער לוגי AND (מפסק כפול)",
+            mission: "<b>משימה:</b> נדרשת אבטחה כפולה: המנוע יפעל <b>רק אם שני המפסקים בלחיצה זמנית</b>. באיזו תצורה נחבר את המפסקים?",
+            theory: "🧠 <b>לוגיקה בוליאנית:</b> חיבור בטור יוצר פונקציית $AND$ ($Y = A \\cdot B$). חיבור במקביל יוצר פונקציית $OR$ ($Y = A + B$).",
+            showColorCode: false,
+            target: "and_gate",
+            loadType: "motor",
+            options: [
+                { id: "and_gate", name: "מפסקים בטור (AND)", icon: "🔗", desc: "שניהם חייבים להיות סגורים" },
+                { id: "or_gate", name: "מפסקים במקביל (OR)", icon: "🔀", desc: "מספיק שאחד ייסגר" },
+                { id: "not_gate", name: "מפסק משתנה (NOT)", icon: "🔄", desc: "הפוך מצב" }
+            ],
+            explanation: "<b>אלוף!</b> חיבור בטור מבטיח שזרימת האלקטרונים תתאפשר רק כאשר שני הרכיבים מוליכים יחד."
+        }
+    ];
+
+    let currentStageIndex = 0;
+    let selectedOption = null;
+    let isCircuitActive = false;
+    let electrons = [];
+
+    const canvas = document.getElementById('circuitCanvas');
+    const ctx = canvas.getContext('2d');
+
+    function resizeCanvas() {
+        canvas.width = canvas.parentElement.clientWidth;
+        canvas.height = canvas.parentElement.clientHeight;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    for(let i=0; i<25; i++) electrons.push({ progress: i / 25 });
+
+    function loadStage(index) {
+        const stage = stages[index];
+        selectedOption = null;
+        isCircuitActive = false;
+
+        document.getElementById('stage-number').innerText = `שלב ${index + 1} מתוך ${stages.length}`;
+        document.getElementById('stage-name').innerText = stage.title;
+        document.getElementById('mission-text').innerHTML = stage.mission;
+        document.getElementById('theory-text').innerHTML = stage.theory;
+        
+        document.getElementById('color-code-box').style.display = stage.showColorCode ? 'block' : 'none';
+        document.getElementById('feedback').style.display = 'none';
+        document.getElementById('next-btn').style.display = 'none';
+        document.getElementById('test-btn').style.display = 'block';
+
+        const container = document.getElementById('options-container');
+        container.innerHTML = '';
+        stage.options.forEach(opt => {
+            const btn = document.createElement('div');
+            btn.className = 'option-btn';
+            btn.onclick = () => selectOption(opt.id, btn);
+            btn.innerHTML = `
+                <span class="icon">${opt.icon}</span>
+                <span class="name">${opt.name}</span>
+                <span class="desc">${opt.desc}</span>
+            `;
+            container.appendChild(btn);
+        });
+    }
+
+    function selectOption(id, element) {
+        selectedOption = id;
+        document.querySelectorAll('.option-btn').forEach(b => b.classList.remove('selected'));
+        element.classList.add('selected');
+    }
+
+    function testCircuit() {
+        if (!selectedOption) {
+            showFeedback("אנא בחר רכיב להצבה במעגל!", "error");
+            return;
+        }
+
+        const stage = stages[currentStageIndex];
+        if (selectedOption === stage.target) {
+            isCircuitActive = true;
+            showFeedback(stage.explanation, "success");
+            document.getElementById('test-btn').style.display = 'none';
+            document.getElementById('next-btn').style.display = 'block';
+        } else {
+            isCircuitActive = false;
+            showFeedback("❌ בחירה שגויה! המעגל אינו מתפקד כנדרש או שהרכיב נשרף. עיין בהערת התאוריה ונסה שוב.", "error");
+        }
+    }
+
+    function showFeedback(text, type) {
+        const fb = document.getElementById('feedback');
+        fb.innerHTML = text;
+        fb.className = `feedback ${type}`;
+        fb.style.display = 'block';
+    }
+
+    function nextStage() {
+        currentStageIndex++;
+        if (currentStageIndex < stages.length) {
+            loadStage(currentStageIndex);
+        } else {
+            alert("🏆 מדהים! השלמת בהצלחה את כל 10 השלבים במעבדה והפגנת שליטה באלקטרוניקה!");
+            currentStageIndex = 0;
+            loadStage(0);
+        }
+    }
+
+    function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        const w = canvas.width;
+        const h = canvas.height;
+        const left = w * 0.18;
+        const right = w * 0.82;
+        const top = h * 0.22;
+        const bottom = h * 0.78;
+
+        // Wires
+        ctx.strokeStyle = "#334155";
+        ctx.lineWidth = 6;
+        ctx.lineCap = "round";
+        ctx.strokeRect(left, top, right - left, bottom - top);
+
+        // Battery (Left)
+        const midY = (top + bottom) / 2;
+        ctx.fillStyle = "#020617";
+        ctx.fillRect(left - 15, midY - 30, 30, 60);
+        ctx.fillStyle = "#ef4444"; ctx.fillRect(left - 10, midY - 24, 20, 18);
+        ctx.fillStyle = "#3b82f6"; ctx.fillRect(left - 10, midY + 6, 20, 18);
+
+        ctx.fillStyle = "#fff";
+        ctx.font = "bold 11px sans-serif";
+        ctx.fillText("+", left - 3, midY - 11);
+        ctx.fillText("-", left - 3, midY + 19);
+
+        // Component Slot (Top Wire)
+        const midX = (left + right) / 2;
+        ctx.fillStyle = "#020617";
+        ctx.fillRect(midX - 45, top - 18, 90, 36);
+
+        ctx.strokeStyle = selectedOption ? "#38bdf8" : "#f59e0b";
+        ctx.lineWidth = 2;
+        ctx.setLineDash([4, 4]);
+        ctx.strokeRect(midX - 45, top - 18, 90, 36);
+        ctx.setLineDash([]);
+
+        // Component Icon Render
+        if (selectedOption) {
+            ctx.fillStyle = "#f8fafc";
+            ctx.font = "18px sans-serif";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText(getComponentIcon(selectedOption), midX, top);
+        }
+
+        // Load Render (Right)
+        ctx.fillStyle = "#020617";
+        ctx.fillRect(right - 20, midY - 20, 40, 40);
+
+        const load = stages[currentStageIndex].loadType;
+        ctx.beginPath();
+        ctx.arc(right, midY, 20, 0, Math.PI * 2);
+        
+        if (isCircuitActive) {
+            ctx.fillStyle = load === "led" ? "#22c55e" : load === "motor" ? "#38bdf8" : "#fde047";
+            ctx.shadowColor = ctx.fillStyle;
+            ctx.shadowBlur = 18;
+        } else {
+            ctx.fillStyle = "#1e293b";
+            ctx.shadowBlur = 0;
+        }
+        ctx.fill();
+        ctx.shadowBlur = 0;
+
+        ctx.fillStyle = "#fff";
+        ctx.font = "16px sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(load === "motor" ? "⚙️" : load === "led" ? "💡" : "💡", right, midY);
+
+        // Electron Motion
+        if (isCircuitActive) {
+            ctx.fillStyle = "#38bdf8";
+            const perimeter = 2 * ((right - left) + (bottom - top));
+
+            electrons.forEach(p => {
+                p.progress += 0.006;
+                if (p.progress > 1) p.progress = 0;
+
+                let dist = p.progress * perimeter;
+                let px = left, py = top;
+
+                if (dist < (right - left)) { px = left + dist; py = top; }
+                else if (dist < (right - left) + (bottom - top)) { px = right; py = top + (dist - (right - left)); }
+                else if (dist < 2 * (right - left) + (bottom - top)) { px = right - (dist - ((right - left) + (bottom - top))); py = bottom; }
+                else { px = left; py = bottom - (dist - (2 * (right - left) + (bottom - top))); }
+
+                ctx.beginPath();
+                ctx.arc(px, py, 3.5, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+
+        requestAnimationFrame(draw);
+    }
+
+    function getComponentIcon(id) {
+        if (id.startsWith("res")) return "⚡";
+        if (id === "diode" || id === "zener") return "➡️";
+        if (id === "npn") return "🔀";
+        if (id === "capacitor") return "🔋";
+        if (id === "fuse") return "💥";
+        if (id === "inductor") return "🌀";
+        if (id === "potentiometer") return "🎛️";
+        if (id.includes("gate")) return "🔗";
+        return "❓";
+    }
+
+    loadStage(0);
+    draw();
+</script>
+
+</body>
+</html>
+
